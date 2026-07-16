@@ -1,0 +1,6 @@
+{
+  "name": "DSA Daily Coach",
+  "description": "A daily LeetCode and DSA learning companion powered by Gemini AI. Get optimized solutions, custom explanations, revision cards, and performance analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
