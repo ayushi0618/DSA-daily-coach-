@@ -1,0 +1,11 @@
+{
+  "name": "dsa-daily-coach",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DSA Daily Coach - Web Edition for Vercel",
+  "scripts": {
+    "dev": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "preview": "npm --prefix web run preview"
+  }
+}

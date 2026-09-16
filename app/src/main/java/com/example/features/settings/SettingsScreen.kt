@@ -301,7 +301,10 @@ fun SettingsScreen(viewModel: DsaViewModel) {
 
                         Switch(
                             checked = isNotifEnabled,
-                            onCheckedChange = { viewModel.toggleNotifications() }
+                            onCheckedChange = {
+                                viewModel.toggleNotifications()
+                                com.example.core.notification.ReminderManager.setReminderEnabled(context, !isNotifEnabled)
+                            }
                         )
                     }
 
@@ -332,6 +335,25 @@ fun SettingsScreen(viewModel: DsaViewModel) {
                             color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.bodyMedium
                         )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    FilledTonalButton(
+                        onClick = {
+                            com.example.core.notification.ReminderManager.showNotification(
+                                context = context,
+                                title = "⚔️ DSA Challenge Reminder",
+                                message = "Time to level up! Solve today's daily problem and extend your streak."
+                            )
+                            Toast.makeText(context, "Test notification sent!", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.NotificationAdd, contentDescription = "Test Notification")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Send Immediate Test Notification", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -503,7 +525,7 @@ fun SettingsScreen(viewModel: DsaViewModel) {
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Version 1.0.0 (Production-Ready Proto)\nPowered by Google AI Studio Gemini 3.5 Flash.\nDeveloped with Material Design 3 and Jetpack Compose on SQLite Room local storage.",
+                        text = "Version 1.0.0 (Production-Ready Proto)\nPowered by Google AI Studio Gemini 1.5 Pro.\nDeveloped with Material Design 3 and Jetpack Compose on SQLite Room local storage.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         lineHeight = 16.sp,
@@ -561,6 +583,7 @@ fun SettingsScreen(viewModel: DsaViewModel) {
                         val min = minuteValue.toIntOrNull()?.coerceIn(0, 59) ?: 0
                         val formatted = String.format("%02d:%02d", hr, min)
                         viewModel.setReminderTime(formatted)
+                        com.example.core.notification.ReminderManager.updateReminderTime(context, hr, min)
                         Toast.makeText(context, "Daily study alarm set for $formatted!", Toast.LENGTH_SHORT).show()
                         showTimeDialog = false
                     }

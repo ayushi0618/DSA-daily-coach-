@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import com.example.core.database.SolvedProblemEntity
 import com.example.features.providers.DsaViewModel
 import com.example.features.providers.SolutionState
+import com.example.features.lecture.AnimatedLecturePlayer
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,6 +68,7 @@ fun AiSolutionScreen(
 
     var showLeetCodeLinkDialog by remember { mutableStateOf(false) }
     var showSubmissionDialog by remember { mutableStateOf(false) }
+    var showFullLectureVideo by remember { mutableStateOf(false) }
 
     // Synchronize notes and text
     LaunchedEffect(savedProblem, solutionState) {
@@ -311,6 +313,74 @@ fun AiSolutionScreen(
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.secondary
                                 )
+                            }
+                        }
+                    }
+                }
+
+                // 1b. Animated Short Video Lecture Player
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
+                        shape = RoundedCornerShape(20.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.SmartDisplay,
+                                        contentDescription = "Animated Lecture",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(26.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = "Animated Short Video Lecture",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "Step-by-step whiteboard animation & algorithmic walkthrough",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                                        )
+                                    }
+                                }
+
+                                FilledTonalButton(
+                                    onClick = { showFullLectureVideo = !showFullLectureVideo },
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (showFullLectureVideo) Icons.Default.VisibilityOff else Icons.Default.PlayArrow,
+                                        contentDescription = "Toggle Video",
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(if (showFullLectureVideo) "Close" else "Watch")
+                                }
+                            }
+
+                            AnimatedVisibility(visible = showFullLectureVideo) {
+                                Column(modifier = Modifier.padding(top = 12.dp)) {
+                                    AnimatedLecturePlayer(
+                                        problemTitle = parsedTitle,
+                                        difficulty = activeDifficulty,
+                                        topic = activeTopic,
+                                        onClose = { showFullLectureVideo = false }
+                                    )
+                                }
                             }
                         }
                     }

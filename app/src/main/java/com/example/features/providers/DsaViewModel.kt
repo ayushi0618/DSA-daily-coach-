@@ -36,6 +36,83 @@ class DsaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private val sharedPrefs = application.getSharedPreferences("dsa_daily_coach_prefs", Context.MODE_PRIVATE)
+
+    // --- Auth State ---
+    private val _isAuthenticated = MutableStateFlow(sharedPrefs.getBoolean("is_authenticated", true))
+    val isAuthenticated: StateFlow<Boolean> = _isAuthenticated.asStateFlow()
+
+    private val _isAuthLoading = MutableStateFlow(false)
+    val isAuthLoading: StateFlow<Boolean> = _isAuthLoading.asStateFlow()
+
+    private val _authError = MutableStateFlow<String?>(null)
+    val authError: StateFlow<String?> = _authError.asStateFlow()
+
+    fun signIn(email: String, pass: String, onSuccess: () -> Unit = {}) {
+        if (email.isBlank() || pass.isBlank()) {
+            _authError.value = "Please enter both email and password."
+            return
+        }
+        viewModelScope.launch {
+            _isAuthLoading.value = true
+            _authError.value = null
+            val res = repository.signInWithEmail(email, pass)
+            _isAuthLoading.value = false
+            if (res.isSuccess) {
+                sharedPrefs.edit().putBoolean("is_authenticated", true).apply()
+                _isAuthenticated.value = true
+                onSuccess()
+            } else {
+                _authError.value = res.exceptionOrNull()?.message ?: "Sign in failed"
+            }
+        }
+    }
+
+    fun signUp(name: String, email: String, pass: String, lang: String, goal: Int, onSuccess: () -> Unit = {}) {
+        if (email.isBlank() || pass.isBlank()) {
+            _authError.value = "Please fill in all required fields."
+            return
+        }
+        viewModelScope.launch {
+            _isAuthLoading.value = true
+            _authError.value = null
+            val res = repository.signUpWithEmail(name, email, pass, lang, goal)
+            _isAuthLoading.value = false
+            if (res.isSuccess) {
+                sharedPrefs.edit().putBoolean("is_authenticated", true).apply()
+                _isAuthenticated.value = true
+                onSuccess()
+            } else {
+                _authError.value = res.exceptionOrNull()?.message ?: "Sign up failed"
+            }
+        }
+    }
+
+    fun signInAsGuest(onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            _isAuthLoading.value = true
+            val res = repository.signInAsGuest()
+            _isAuthLoading.value = false
+            if (res.isSuccess) {
+                sharedPrefs.edit().putBoolean("is_authenticated", true).apply()
+                _isAuthenticated.value = true
+                onSuccess()
+            }
+        }
+    }
+
+    fun signOut() {
+        viewModelScope.launch {
+            repository.signOutUser()
+            sharedPrefs.edit().putBoolean("is_authenticated", false).apply()
+            _isAuthenticated.value = false
+        }
+    }
+
+    fun clearAuthError() {
+        _authError.value = null
+    }
+
     // --- User State ---
     val userState: StateFlow<UserEntity?> = repository.getActiveUserFlow()
         .stateIn(
@@ -111,8 +188,23 @@ class DsaViewModel(application: Application) : AndroidViewModel(application) {
     private val _preferredLanguage = MutableStateFlow("Java")
     val preferredLanguage: StateFlow<String> = _preferredLanguage.asStateFlow()
 
-    // --- LeetCode SharedPreferences Persistence ---
-    private val sharedPrefs = application.getSharedPreferences("dsa_daily_coach_prefs", Context.MODE_PRIVATE)
+    // --- Onboarding State ---
+    private val _hasCompletedOnboarding = MutableStateFlow(sharedPrefs.getBoolean("has_completed_onboarding", false))
+    val hasCompletedOnboarding: StateFlow<Boolean> = _hasCompletedOnboarding.asStateFlow()
+
+    fun completeOnboarding() {
+        sharedPrefs.edit().putBoolean("has_completed_onboarding", true).apply()
+        _hasCompletedOnboarding.value = true
+    }
+
+    fun resetOnboarding() {
+        sharedPrefs.edit().putBoolean("has_completed_onboarding", false).apply()
+        _hasCompletedOnboarding.value = false
+    }
+
+    // --- Gamification Chat Counter ---
+    private val _chatQuestionsCount = MutableStateFlow(sharedPrefs.getInt("chat_questions_count", 0))
+    val chatQuestionsCount: StateFlow<Int> = _chatQuestionsCount.asStateFlow()
 
     private val _leetcodeUsername = MutableStateFlow(sharedPrefs.getString("leetcode_username", "") ?: "")
     val leetcodeUsername: StateFlow<String> = _leetcodeUsername.asStateFlow()
@@ -232,7 +324,7 @@ class DsaViewModel(application: Application) : AndroidViewModel(application) {
                 favorite = false
             )
             repository.saveSolvedProblem(solvedProblem)
-            repository.incrementStreakAndXP() // Update user levels and streaks
+            repository.incrementStreakAndXP(difficulty) // Award XP based on difficulty
         }
     }
 
@@ -267,6 +359,7 @@ class DsaViewModel(application: Application) : AndroidViewModel(application) {
     fun rateRevision(problemId: String, score: Int) {
         viewModelScope.launch {
             repository.saveRevision(problemId, score)
+            repository.awardXp(50) // Award +50 XP for completing a revision review
         }
     }
 
@@ -276,6 +369,10 @@ class DsaViewModel(application: Application) : AndroidViewModel(application) {
         
         val userMsg = ChatMessage(question, true)
         _chatMessages.value = _chatMessages.value + userMsg
+
+        val newCount = _chatQuestionsCount.value + 1
+        _chatQuestionsCount.value = newCount
+        sharedPrefs.edit().putInt("chat_questions_count", newCount).apply()
         
         viewModelScope.launch {
             _isChatLoading.value = true
@@ -290,6 +387,7 @@ class DsaViewModel(application: Application) : AndroidViewModel(application) {
             val botMsg = ChatMessage(response, false)
             _chatMessages.value = _chatMessages.value + botMsg
             _isChatLoading.value = false
+            repository.awardXp(25) // Award +25 XP for asking and studying a DSA concept
         }
     }
 

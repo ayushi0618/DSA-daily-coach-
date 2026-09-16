@@ -91,7 +91,7 @@ object GeminiClient {
 
     suspend fun generateContent(
         prompt: String,
-        model: String = "gemini-3.5-flash",
+        model: String = "gemini-2.5-flash",
         systemInstruction: String? = null,
         enableHighThinking: Boolean = false
     ): String {
@@ -117,23 +117,43 @@ object GeminiClient {
             }
         )
 
-        return try {
-            val response = service.generateContent(model, apiKey, requestBody)
-            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
-                ?: "No response content found."
-        } catch (e: retrofit2.HttpException) {
-            val errorBody = e.response()?.errorBody()?.string() ?: ""
-            val errorMessage = if (errorBody.contains("\"message\"")) {
-                // Extract message using simple regex to avoid adding more JSON parsing logic here
-                Regex("\"message\"\\s*:\\s*\"([^\"]+)\"").find(errorBody)?.groupValues?.get(1) ?: errorBody
-            } else {
-                errorBody
-            }
-            "Network Error: HTTP ${e.code()} - $errorMessage"
-        } catch (e: java.net.UnknownHostException) {
-            "Network Error: No internet connection. The emulator might be offline."
-        } catch (e: Exception) {
-            "Network Error: ${e.javaClass.simpleName} - ${e.localizedMessage}"
+        // Try primary model, fallback if HTTP 503 (high demand) or 404
+        val candidateModels = if (model != "gemini-2.5-flash") {
+            listOf(model, "gemini-2.5-flash", "gemini-3.5-flash")
+        } else {
+            listOf("gemini-2.5-flash", "gemini-3.5-flash")
         }
+
+        var lastError = ""
+        for (targetModel in candidateModels) {
+            try {
+                val response = service.generateContent(targetModel, apiKey, requestBody)
+                val text = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
+                if (!text.isNullOrBlank()) {
+                    return text
+                }
+            } catch (e: retrofit2.HttpException) {
+                val code = e.code()
+                val errorBody = e.response()?.errorBody()?.string() ?: ""
+                val errorMessage = if (errorBody.contains("\"message\"")) {
+                    Regex("\"message\"\\s*:\\s*\"([^\"]+)\"").find(errorBody)?.groupValues?.get(1) ?: errorBody
+                } else {
+                    errorBody
+                }
+                lastError = "Network Error: HTTP $code - $errorMessage"
+                // If 503 or 429 or 404, try next candidate model
+                if (code == 503 || code == 429 || code == 404) {
+                    continue
+                } else {
+                    return lastError
+                }
+            } catch (e: java.net.UnknownHostException) {
+                return "Network Error: No internet connection. The emulator might be offline."
+            } catch (e: Exception) {
+                lastError = "Network Error: ${e.javaClass.simpleName} - ${e.localizedMessage}"
+            }
+        }
+
+        return if (lastError.isNotEmpty()) lastError else "No response content found."
     }
 }

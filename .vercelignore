@@ -1,0 +1,10 @@
+# Ignore Android files during Vercel Web deployments
+app/
+gradle/
+.gradle/
+build.gradle.kts
+settings.gradle.kts
+gradle.properties
+debug.keystore.base64
+TestGemini.kt
+test_model.sh

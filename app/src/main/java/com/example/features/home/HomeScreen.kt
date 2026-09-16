@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.core.database.SolvedProblemEntity
 import com.example.core.database.UserEntity
+import com.example.core.gamification.GamificationManager
 import com.example.features.providers.DsaViewModel
 import com.example.ui.theme.ExperienceXp
 import com.example.ui.theme.StreakGold
@@ -33,6 +34,8 @@ import androidx.compose.ui.text.font.FontFamily
 import com.example.core.repository.DailyQuoteService
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.features.home.components.DailyStreakTrackerCard
+import com.example.features.lecture.AnimatedLecturePlayer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,10 +43,24 @@ fun HomeScreen(
     viewModel: DsaViewModel,
     onNavigateToSolve: () -> Unit,
     onNavigateToDoubt: () -> Unit,
-    onNavigateToProblemDetails: (String, String) -> Unit
+    onNavigateToProblemDetails: (String, String) -> Unit,
+    onOpenOnboarding: () -> Unit = {}
 ) {
     val user by viewModel.userState.collectAsState()
     val solvedList by viewModel.solvedProblems.collectAsState()
+    val revisionList by viewModel.revisionLogs.collectAsState()
+    val chatCount by viewModel.chatQuestionsCount.collectAsState()
+
+    var showLectureModal by remember { mutableStateOf(false) }
+
+    val levelInfo = remember(user?.xpPoints) {
+        GamificationManager.getLevelInfo(user?.xpPoints ?: 0)
+    }
+
+    val badges = remember(user, solvedList, revisionList, chatCount) {
+        GamificationManager.computeBadges(user, solvedList, revisionList, chatCount)
+    }
+    val unlockedBadgesCount = badges.count { it.isUnlocked }
 
     val currentDate = remember {
         SimpleDateFormat("EEEE, MMMM dd", Locale.getDefault()).format(Date())
@@ -58,7 +75,7 @@ fun HomeScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 1. Header Greeting & Avatar
+        // 1. Header Greeting & Avatar + Guide Button
         item {
             Row(
                 modifier = Modifier
@@ -67,7 +84,7 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = currentDate.uppercase(),
                         style = MaterialTheme.typography.labelSmall,
@@ -82,156 +99,270 @@ fun HomeScreen(
                     )
                 }
 
-                // Custom avatar with user level
-                Box(
-                    modifier = Modifier
-                        .size(54.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.primary,
-                                    MaterialTheme.colorScheme.secondary
-                                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Tutorial Guide Chip
+                    Surface(
+                        onClick = onOpenOnboarding,
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                        modifier = Modifier.padding(end = 10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MenuBook,
+                                contentDescription = "Tutorial",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
                             )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "${user?.level ?: 1}",
-                        fontWeight = FontWeight.Black,
-                        fontSize = 18.sp,
-                        color = Color.White
-                    )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Guide",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    // Custom avatar with user level
+                    Box(
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.primary,
+                                        MaterialTheme.colorScheme.secondary
+                                    )
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${levelInfo.level}",
+                            fontWeight = FontWeight.Black,
+                            fontSize = 18.sp,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }
 
-        // 2. Streaks and XP Side-by-Side Cards (Editorial Card Layout)
+        // 2. Real-time Daily Streak Tracker Component (Room Database Persisted)
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            DailyStreakTrackerCard(
+                solvedProblems = solvedList,
+                onSolveDailyClick = onNavigateToSolve,
+                onWatchLectureClick = { showLectureModal = true }
+            )
+        }
+
+        // 2b. Gamification Level & XP Progression Card
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("xp_card"),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)),
+                shape = RoundedCornerShape(20.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
-                // Streak Card
-                Card(
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .height(130.dp)
-                        .testTag("streak_card"),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)),
-                    shape = RoundedCornerShape(24.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.SpaceBetween
-                    ) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "WEEKLY GOAL",
+                                text = "LEVEL ${levelInfo.level} • ${levelInfo.title.uppercase()}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold
                             )
                             Icon(
-                                imageVector = Icons.Default.LocalFireDepartment,
-                                contentDescription = "Streak",
-                                tint = StreakGold,
-                                modifier = Modifier.size(18.dp)
+                                imageVector = Icons.Default.TrendingUp,
+                                contentDescription = "Level",
+                                tint = ExperienceXp,
+                                modifier = Modifier.size(16.dp)
                             )
                         }
 
-                        Text(
-                            text = "${user?.streak ?: 0} Days",
-                            style = MaterialTheme.typography.displayMedium,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
+                        Spacer(modifier = Modifier.height(6.dp))
 
-                        Text(
-                            text = "Keep the momentum!",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                        )
-                    }
-                }
-
-                // XP Card
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(130.dp)
-                        .testTag("xp_card"),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)),
-                    shape = RoundedCornerShape(24.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.SpaceBetween
-                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.Bottom
                         ) {
                             Text(
-                                text = "DAILY XP",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
+                                text = "${user?.xpPoints ?: 0} Total XP",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Black,
+                                color = MaterialTheme.colorScheme.onBackground
                             )
                             Text(
-                                text = "LVL ${user?.level ?: 1}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
+                                text = if (levelInfo.xpNeededForNextLevel > 0) "${levelInfo.xpNeededForNextLevel} XP to Lvl ${levelInfo.level + 1}" else "Max Level",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                             )
                         }
 
-                        Text(
-                            text = "+${user?.xpPoints ?: 0}",
-                            style = MaterialTheme.typography.displayMedium,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                        Column {
-                            val xpProgress = remember(user?.xpPoints) {
-                                val currentXp = user?.xpPoints ?: 0
-                                val nextLevelBound = ((user?.level ?: 1) * 200)
-                                val prevLevelBound = ((user?.level ?: 1) - 1) * 200
-                                val progress = (currentXp - prevLevelBound).toFloat() / (nextLevelBound - prevLevelBound).toFloat()
-                                progress.coerceIn(0f, 1f)
-                            }
-                            LinearProgressIndicator(
-                                progress = { xpProgress },
+                        LinearProgressIndicator(
+                            progress = { levelInfo.currentLevelProgress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(CircleShape),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                        )
+                    }
+                }
+            }
+        }
+
+        // 3. Badges Milestone Strip (GAMIFICATION)
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(20.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.EmojiEvents,
+                            contentDescription = "Badges",
+                            tint = StreakGold,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Milestone Badges: $unlockedBadgesCount / ${badges.size} Unlocked",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        badges.take(4).forEach { badge ->
+                            Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(4.dp)
-                                    .clip(CircleShape),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "To Lvl ${(user?.level ?: 1) + 1}",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontSize = 9.sp,
-                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-                            )
+                                    .size(26.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (badge.isUnlocked) StreakGold.copy(alpha = 0.2f)
+                                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = badge.icon,
+                                    contentDescription = badge.title,
+                                    tint = if (badge.isUnlocked) StreakGold else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
                         }
                     }
+                }
+            }
+        }
+
+        // 4. AI Chat Assistant Callout Card (FEATURE)
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onNavigateToDoubt() }
+                    .testTag("home_ai_coach_card"),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(24.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Psychology,
+                            contentDescription = "AI Coach",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "DSA AI Doubt Coach",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(
+                                    text = "+25 XP",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Stuck on concepts or logic? Ask questions, clarify time complexity, or get guided hints.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
+
+                    Icon(
+                        imageVector = Icons.Default.ArrowForward,
+                        contentDescription = "Chat",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }
@@ -654,6 +785,19 @@ fun HomeScreen(
 
         item {
             Spacer(modifier = Modifier.height(60.dp)) // Avoid nav clip
+        }
+    }
+
+    if (showLectureModal) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showLectureModal = false }
+        ) {
+            AnimatedLecturePlayer(
+                problemTitle = "Two Sum - Hash Map Sweep",
+                difficulty = "Medium",
+                topic = "Arrays & Hashing",
+                onClose = { showLectureModal = false }
+            )
         }
     }
 }

@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.features.providers.DsaViewModel
 import com.example.features.providers.SolutionState
+import com.example.features.lecture.AnimatedLecturePlayer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +34,7 @@ fun DailyProblemScreen(
     var inputQuery by remember { mutableStateFlowOf("") }
     var selectedLanguage by remember { mutableStateFlowOf("Java") }
     var deepReasoningEnabled by remember { mutableStateOf(true) }
+    var showVideoLecture by remember { mutableStateOf(false) }
 
     val searchHistory by viewModel.searchHistory.collectAsState()
     val solutionState by viewModel.solutionState.collectAsState()
@@ -75,6 +77,74 @@ fun DailyProblemScreen(
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                     modifier = Modifier.padding(top = 6.dp)
                 )
+            }
+        }
+
+        // 1b. Short Video Lecture Masterclass Card
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
+                shape = RoundedCornerShape(20.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SmartDisplay,
+                                contentDescription = "Video Lecture",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Animated Short Lecture",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Watch animated step-by-step whiteboard explanation",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                                )
+                            }
+                        }
+
+                        FilledTonalButton(
+                            onClick = { showVideoLecture = !showVideoLecture },
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (showVideoLecture) Icons.Default.VisibilityOff else Icons.Default.PlayArrow,
+                                contentDescription = "Toggle Lecture",
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(if (showVideoLecture) "Close" else "Watch")
+                        }
+                    }
+
+                    AnimatedVisibility(visible = showVideoLecture) {
+                        Column(modifier = Modifier.padding(top = 12.dp)) {
+                            AnimatedLecturePlayer(
+                                problemTitle = if (inputQuery.isNotBlank()) inputQuery else "Today's Challenge: Two Sum",
+                                difficulty = "Medium",
+                                topic = "Arrays & Hashing",
+                                onClose = { showVideoLecture = false }
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -184,7 +254,7 @@ fun DailyProblemScreen(
                                 )
                             }
                             Text(
-                                text = "Uses Gemini 3.5 Flash with high thinking mode for elite analytical details.",
+                                text = "Uses Gemini 1.5 Pro with high thinking mode for elite analytical details.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                 modifier = Modifier.padding(top = 2.dp)

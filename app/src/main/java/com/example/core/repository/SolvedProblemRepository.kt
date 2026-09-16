@@ -49,6 +49,126 @@ class SolvedProblemRepository(context: Context) {
         return userDao.getUserFlow().flowOn(Dispatchers.IO)
     }
 
+    suspend fun signInWithEmail(email: String, pass: String): Result<UserEntity> = withContext(Dispatchers.IO) {
+        try {
+            if (firebaseAuth != null) {
+                try {
+                    val authResult = firebaseAuth!!.signInWithEmailAndPassword(email, pass).await()
+                    val user = authResult.user
+                    val entity = UserEntity(
+                        uid = user?.uid ?: "firebase_${System.currentTimeMillis()}",
+                        displayName = user?.displayName ?: email.substringBefore("@"),
+                        email = user?.email ?: email,
+                        photoUrl = user?.photoUrl?.toString() ?: "",
+                        joinedDate = System.currentTimeMillis(),
+                        streak = 3,
+                        totalProblems = 0,
+                        dailyGoal = 1,
+                        preferredLanguage = "Java",
+                        xpPoints = 150,
+                        level = 1
+                    )
+                    userDao.insertUser(entity)
+                    return@withContext Result.success(entity)
+                } catch (fbErr: Exception) {
+                    Log.w("SolvedProblemRepository", "Firebase auth failed, trying local fallback: ${fbErr.message}")
+                }
+            }
+            // Local fallback authentication
+            val existing = userDao.getUserDirect()
+            val finalUser = if (existing != null && existing.email.equals(email, ignoreCase = true)) {
+                existing
+            } else {
+                UserEntity(
+                    uid = "user_${email.hashCode()}",
+                    displayName = email.substringBefore("@").replace(".", " ").capitalize(),
+                    email = email,
+                    photoUrl = "",
+                    joinedDate = System.currentTimeMillis(),
+                    streak = 1,
+                    totalProblems = 0,
+                    dailyGoal = 1,
+                    preferredLanguage = "Java",
+                    xpPoints = 100,
+                    level = 1
+                )
+            }
+            userDao.insertUser(finalUser)
+            Result.success(finalUser)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun signUpWithEmail(
+        name: String,
+        email: String,
+        pass: String,
+        language: String,
+        dailyGoal: Int
+    ): Result<UserEntity> = withContext(Dispatchers.IO) {
+        try {
+            var uid = "local_${System.currentTimeMillis()}"
+            if (firebaseAuth != null) {
+                try {
+                    val authResult = firebaseAuth!!.createUserWithEmailAndPassword(email, pass).await()
+                    uid = authResult.user?.uid ?: uid
+                } catch (fbErr: Exception) {
+                    Log.w("SolvedProblemRepository", "Firebase signup failed, using local registration: ${fbErr.message}")
+                }
+            }
+            val newUser = UserEntity(
+                uid = uid,
+                displayName = name.ifBlank { email.substringBefore("@") },
+                email = email,
+                photoUrl = "",
+                joinedDate = System.currentTimeMillis(),
+                streak = 1,
+                totalProblems = 0,
+                dailyGoal = dailyGoal,
+                preferredLanguage = language,
+                xpPoints = 100,
+                level = 1
+            )
+            userDao.insertUser(newUser)
+            syncUserToFirestore(newUser)
+            Result.success(newUser)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun signInAsGuest(): Result<UserEntity> = withContext(Dispatchers.IO) {
+        try {
+            val guestUser = UserEntity(
+                uid = "guest_${System.currentTimeMillis()}",
+                displayName = "Guest Scholar",
+                email = "guest@dsacoach.app",
+                photoUrl = "",
+                joinedDate = System.currentTimeMillis(),
+                streak = 1,
+                totalProblems = 0,
+                dailyGoal = 1,
+                preferredLanguage = "Java",
+                xpPoints = 50,
+                level = 1
+            )
+            userDao.insertUser(guestUser)
+            Result.success(guestUser)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun signOutUser() = withContext(Dispatchers.IO) {
+        try {
+            firebaseAuth?.signOut()
+            userDao.clearUser()
+        } catch (e: Exception) {
+            Log.e("SolvedProblemRepository", "Error during sign out: ${e.message}")
+        }
+    }
+
     suspend fun ensureUserExists() = withContext(Dispatchers.IO) {
         val uid = getCurrentUserUid()
         val localUser = userDao.getUserDirect()
@@ -89,15 +209,33 @@ class SolvedProblemRepository(context: Context) {
         }
     }
 
-    suspend fun incrementStreakAndXP() = withContext(Dispatchers.IO) {
+    suspend fun incrementStreakAndXP(difficulty: String = "Medium") = withContext(Dispatchers.IO) {
         val current = userDao.getUserDirect()
         if (current != null) {
-            val xpGain = 50
+            val xpGain = when (difficulty.lowercase()) {
+                "easy" -> 100
+                "hard" -> 350
+                else -> 200 // Medium or default
+            }
             val newXp = current.xpPoints + xpGain
-            val newLevel = (newXp / 200) + 1
+            val newLevel = com.example.core.gamification.GamificationManager.getLevelInfo(newXp).level
             val updated = current.copy(
                 streak = current.streak + 1,
                 totalProblems = current.totalProblems + 1,
+                xpPoints = newXp,
+                level = newLevel
+            )
+            userDao.insertUser(updated)
+            syncUserToFirestore(updated)
+        }
+    }
+
+    suspend fun awardXp(amount: Int) = withContext(Dispatchers.IO) {
+        val current = userDao.getUserDirect()
+        if (current != null) {
+            val newXp = current.xpPoints + amount
+            val newLevel = com.example.core.gamification.GamificationManager.getLevelInfo(newXp).level
+            val updated = current.copy(
                 xpPoints = newXp,
                 level = newLevel
             )
@@ -297,7 +435,7 @@ class SolvedProblemRepository(context: Context) {
 
         return GeminiClient.generateContent(
             prompt = prompt,
-            model = "gemini-3.5-flash",
+            model = "gemini-2.5-flash",
             systemInstruction = systemInstruction,
             enableHighThinking = enableHighThinking
         )
@@ -321,7 +459,7 @@ class SolvedProblemRepository(context: Context) {
 
         return GeminiClient.generateContent(
             prompt = prompt,
-            model = "gemini-3.5-flash",
+            model = "gemini-2.5-flash",
             systemInstruction = systemInstruction
         )
     }
