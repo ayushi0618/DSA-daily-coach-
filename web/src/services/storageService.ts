@@ -1,4 +1,4 @@
-import { SolvedProblem, UserStats, UserProfile, ChatMessage, AchievementBadge, Language, DailyQuote, DailyChallenge } from '../types';
+import { SolvedProblem, UserStats, UserProfile, ChatMessage, AchievementBadge, Language, DailyQuote, DailyChallenge, MockResult, StudyPlanDay, ReviewState } from '../types';
 
 const STORAGE_KEYS = {
   SOLVED_PROBLEMS: 'dsa_solved_problems',
@@ -7,6 +7,10 @@ const STORAGE_KEYS = {
   GEMINI_KEY: 'dsa_gemini_api_key',
   SETTINGS: 'dsa_settings',
   NOTES: 'dsa_problem_notes',
+  MOCK_HISTORY: 'dsa_mock_history',
+  STUDY_PLAN: 'dsa_study_plan',
+  REVIEW_STATE: 'dsa_review_state',
+  PATTERNS_VIEWED: 'dsa_patterns_viewed',
 };
 
 export const StorageService = {
@@ -30,7 +34,7 @@ export const StorageService = {
     const updated: UserProfile = {
       ...current,
       email,
-      displayName: email.split('@')[0].replace(/\./g, ' '),
+      displayName: email.split('@')[0].replace('.', ' '),
       isGuest: false,
     };
     this.saveUserProfile(updated);
@@ -488,6 +492,142 @@ export const StorageService = {
 
   setGeminiApiKey(key: string): void {
     localStorage.setItem(STORAGE_KEYS.GEMINI_KEY, key.trim());
+  },
+
+  // --- XP Rewards (visualizer, patterns, mocks, study plan, reviews) ---
+  addXP(amount: number): UserProfile {
+    const profile = this.getUserProfile();
+    profile.xp += amount;
+    profile.level = Math.floor(profile.xp / 250) + 1;
+    this.saveUserProfile(profile);
+    return profile;
+  },
+
+  // --- Mock Interview History ---
+  getMockHistory(): MockResult[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.MOCK_HISTORY);
+      if (!data) return [];
+      return JSON.parse(data);
+    } catch {
+      return [];
+    }
+  },
+
+  saveMockResult(result: Omit<MockResult, 'id' | 'completedAt'>): MockResult {
+    const entry: MockResult = {
+      ...result,
+      id: 'mock_' + Date.now(),
+      completedAt: Date.now(),
+    };
+    const list = [entry, ...this.getMockHistory()].slice(0, 50);
+    localStorage.setItem(STORAGE_KEYS.MOCK_HISTORY, JSON.stringify(list));
+    this.addXP(result.xpEarned);
+    return entry;
+  },
+
+  clearMockHistory(): void {
+    localStorage.removeItem(STORAGE_KEYS.MOCK_HISTORY);
+  },
+
+  // --- 7-Day Study Plan ---
+  getStudyPlan(): StudyPlanDay[] | null {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.STUDY_PLAN);
+      if (!data) return null;
+      return JSON.parse(data);
+    } catch {
+      return null;
+    }
+  },
+
+  saveStudyPlan(plan: StudyPlanDay[]): void {
+    localStorage.setItem(STORAGE_KEYS.STUDY_PLAN, JSON.stringify(plan));
+  },
+
+  toggleStudyPlanDay(day: number): StudyPlanDay[] | null {
+    const plan = this.getStudyPlan();
+    if (!plan) return null;
+    const updated = plan.map(d => (d.day === day ? { ...d, done: !d.done } : d));
+    const toggled = updated.find(d => d.day === day);
+    this.saveStudyPlan(updated);
+    // Award XP when a day is marked complete (not when unchecking)
+    if (toggled && toggled.done) {
+      this.addXP(30);
+    }
+    return updated;
+  },
+
+  clearStudyPlan(): void {
+    localStorage.removeItem(STORAGE_KEYS.STUDY_PLAN);
+  },
+
+  // --- Spaced Repetition (SM-2 lite) review state per solved problem ---
+  getReviewState(): Record<string, ReviewState> {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.REVIEW_STATE);
+      if (!data) return {};
+      return JSON.parse(data);
+    } catch {
+      return {};
+    }
+  },
+
+  gradeReview(problemId: string, grade: 'again' | 'hard' | 'good' | 'easy'): ReviewState {
+    const all = this.getReviewState();
+    const prev: ReviewState = all[problemId] || { ease: 2.5, interval: 0, reps: 0, nextReview: 0 };
+    const dayMs = 24 * 60 * 60 * 1000;
+    let { ease, interval, reps } = prev;
+
+    if (grade === 'again') {
+      reps = 0;
+      interval = 1;
+      ease = Math.max(1.3, ease - 0.2);
+    } else if (grade === 'hard') {
+      interval = Math.max(1, Math.round(interval * 1.2)) || 1;
+      ease = Math.max(1.3, ease - 0.15);
+    } else if (grade === 'good') {
+      reps += 1;
+      interval = reps === 1 ? 1 : reps === 2 ? 6 : Math.round(interval * ease);
+    } else {
+      // easy
+      reps += 1;
+      const base = reps === 1 ? 1 : reps === 2 ? 6 : Math.round(interval * ease);
+      interval = Math.max(1, Math.round(base * 1.3));
+      ease = ease + 0.15;
+    }
+
+    const next: ReviewState = {
+      ease: Math.round(ease * 100) / 100,
+      interval,
+      reps,
+      nextReview: Date.now() + interval * dayMs,
+      lastGrade: grade,
+    };
+    all[problemId] = next;
+    localStorage.setItem(STORAGE_KEYS.REVIEW_STATE, JSON.stringify(all));
+    this.addXP(5);
+    return next;
+  },
+
+  // --- Pattern cards viewed (for XP, first view only) ---
+  getViewedPatterns(): string[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.PATTERNS_VIEWED);
+      if (!data) return [];
+      return JSON.parse(data);
+    } catch {
+      return [];
+    }
+  },
+
+  markPatternViewed(patternId: string): boolean {
+    const viewed = this.getViewedPatterns();
+    if (viewed.includes(patternId)) return false;
+    viewed.push(patternId);
+    localStorage.setItem(STORAGE_KEYS.PATTERNS_VIEWED, JSON.stringify(viewed));
+    this.addXP(10);
+    return true;
   },
 };
 
