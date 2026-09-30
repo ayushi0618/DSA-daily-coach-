@@ -159,7 +159,7 @@ export const App: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 dark:border-slate-800 bg-slate-1000 dark:bg-slate-900/50 py-6 text-center text-xs text-slate-600 dark:text-slate-400">
+      <footer className="border-t border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900/50 py-6 text-center text-xs text-slate-600 dark:text-slate-400">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>
             <strong>DSA Daily Coach</strong> • Web & Android Parity • Powered by Gemini 2.5 & Local Storage
