@@ -30,7 +30,7 @@ export const StorageService = {
     const updated: UserProfile = {
       ...current,
       email,
-      displayName: email.split('@')[0].replace('.', ' '),
+      displayName: email.split('@')[0].replace(/\./g, ' '),
       isGuest: false,
     };
     this.saveUserProfile(updated);
