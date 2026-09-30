@@ -16,3 +16,9 @@
 local.properties
 .env
 debug.keystore
+
+# web build artifacts
+web/node_modules/
+web/dist/
+web/dist-ssr/
+web/tsconfig.tsbuildinfo
