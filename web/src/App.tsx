@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { HomeView } from './components/HomeView';
 import { ProblemSolver } from './components/ProblemSolver';
+import { VisualizerView } from './components/VisualizerView';
+import { PatternsView } from './components/PatternsView';
+import { MockInterviewView } from './components/MockInterviewView';
 import { AnimatedLecture } from './components/AnimatedLecture';
 import { RevisionFlashcards } from './components/RevisionFlashcards';
 import { ChatView } from './components/ChatView';
@@ -71,8 +74,12 @@ export const App: React.FC = () => {
     setIsAuthModalOpen(true);
   };
 
+  const refreshProfile = () => {
+    setUserProfile(StorageService.getUserProfile());
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-slate-900 transition-colors duration-200">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white transition-colors duration-200">
       
       {/* Top Navigation Bar with All Hubs & Account Status */}
       <Navbar
@@ -87,7 +94,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Responsive View Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 bg-graph-motif bg-top">
         
         {/* 1. Home Dashboard Hub */}
         {activeTab === 'home' && (
@@ -99,6 +106,7 @@ export const App: React.FC = () => {
             onOpenDoubts={() => setActiveTab('chat')}
             onOpenVault={() => setActiveTab('revision')}
             onOpenAuth={() => setIsAuthModalOpen(true)}
+            onXP={refreshProfile}
           />
         )}
 
@@ -110,6 +118,21 @@ export const App: React.FC = () => {
             initialQuery={pendingProblemQuery}
             initialDifficulty={pendingDifficulty}
           />
+        )}
+
+        {/* 3. Algorithm Visualizer */}
+        {activeTab === 'visualizer' && (
+          <VisualizerView onXP={refreshProfile} />
+        )}
+
+        {/* 4. DSA Patterns Library */}
+        {activeTab === 'patterns' && (
+          <PatternsView onXP={refreshProfile} darkMode={darkMode} />
+        )}
+
+        {/* 5. Mock Interview Mode */}
+        {activeTab === 'interview' && (
+          <MockInterviewView onXP={refreshProfile} />
         )}
 
         {/* 3. Interactive Whiteboard Animated Lecture */}
@@ -126,6 +149,7 @@ export const App: React.FC = () => {
           <RevisionFlashcards
             problems={solvedProblems}
             onDeleteProblem={handleDeleteProblem}
+            onXP={refreshProfile}
           />
         )}
 
@@ -159,7 +183,7 @@ export const App: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900/50 py-6 text-center text-xs text-slate-600 dark:text-slate-400">
+      <footer className="border-t border-slate-200 dark:border-slate-800 bg-slate-1000 dark:bg-slate-900/50 py-6 text-center text-xs text-slate-600 dark:text-slate-400">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>
             <strong>DSA Daily Coach</strong> • Web & Android Parity • Powered by Gemini 2.5 & Local Storage

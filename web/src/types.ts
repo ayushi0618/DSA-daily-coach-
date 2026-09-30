@@ -2,7 +2,7 @@ export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
 export type Language = 'Java' | 'Python' | 'C++' | 'JavaScript' | 'Kotlin' | 'Go';
 
-export type NavTab = 'home' | 'solver' | 'lecture' | 'revision' | 'chat' | 'analytics' | 'profile';
+export type NavTab = 'home' | 'solver' | 'visualizer' | 'patterns' | 'interview' | 'lecture' | 'revision' | 'chat' | 'analytics' | 'profile';
 
 export interface UserProfile {
   uid: string;
@@ -95,6 +95,42 @@ export interface DailyQuote {
   quote: string;
   author: string;
   tag: string;
+}
+
+export interface MockProblem {
+  id: string;
+  title: string;
+  difficulty: Difficulty;
+  statement: string;
+  examples: Array<{ input: string; output: string; explanation?: string }>;
+  constraints: string[];
+  leetCodeUrl: string;
+}
+
+export interface MockResult {
+  id: string;
+  problemTitle: string;
+  difficulty: Difficulty;
+  durationMin: number;
+  rubric: { correctness: number; complexity: number; edgeCases: number; communication: number };
+  totalScore: number;
+  xpEarned: number;
+  completedAt: number;
+}
+
+export interface StudyPlanDay {
+  day: number;
+  topic: string;
+  problems: Array<{ title: string; difficulty: Difficulty; url: string }>;
+  done: boolean;
+}
+
+export interface ReviewState {
+  ease: number;      // SM-2 easiness factor
+  interval: number;  // days until next review
+  reps: number;      // consecutive successful recalls
+  nextReview: number; // timestamp
+  lastGrade?: 'again' | 'hard' | 'good' | 'easy';
 }
 
 export interface AchievementBadge {

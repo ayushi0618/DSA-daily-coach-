@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Moon, Sun, Settings, Zap, Home, Code2, PlayCircle, BookOpen, MessageSquare, BarChart3, User, ShieldCheck, Download } from 'lucide-react';
+import { Flame, Moon, Sun, Settings, Zap, Home, Code2, PlayCircle, BookOpen, MessageSquare, BarChart3, BarChart2, Shapes, Mic, User, ShieldCheck, Download } from 'lucide-react';
 import { UserStats, UserProfile, NavTab } from '../types';
 
 interface NavbarProps {
@@ -25,11 +25,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const tabs: Array<{ id: NavTab; label: string; icon: React.ReactNode }> = [
     { id: 'home', label: 'Home', icon: <Home className="w-4 h-4" /> },
-    { id: 'solver', label: 'Daily Solver', icon: <Code2 className="w-4 h-4" /> },
-    { id: 'lecture', label: 'Animated Lecture', icon: <PlayCircle className="w-4 h-4" /> },
-    { id: 'revision', label: 'Revision Vault', icon: <BookOpen className="w-4 h-4" /> },
+    { id: 'solver', label: 'Solver', icon: <Code2 className="w-4 h-4" /> },
+    { id: 'visualizer', label: 'Visualizer', icon: <BarChart2 className="w-4 h-4" /> },
+    { id: 'patterns', label: 'Patterns', icon: <Shapes className="w-4 h-4" /> },
+    { id: 'interview', label: 'Interview', icon: <Mic className="w-4 h-4" /> },
+    { id: 'lecture', label: 'Lecture', icon: <PlayCircle className="w-4 h-4" /> },
+    { id: 'revision', label: 'Vault', icon: <BookOpen className="w-4 h-4" /> },
     { id: 'chat', label: 'AI Tutor', icon: <MessageSquare className="w-4 h-4" /> },
-    { id: 'analytics', label: 'Analytics', icon: <BarChart3 className="w-4 h-4" /> },
+    { id: 'analytics', label: 'Stats', icon: <BarChart3 className="w-4 h-4" /> },
     { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" /> },
   ];
 
@@ -54,8 +57,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           </svg>
           <div>
             <div className="flex items-center space-x-1.5">
-              <span className="font-black text-base sm:text-lg text-slate-900 dark:text-white tracking-tight">
-                DSA Daily Coach
+              <span className="font-display font-bold text-base sm:text-lg text-slate-900 dark:text-white tracking-tight">
+                DSA<span className="text-indigo-600 dark:text-indigo-400">_</span>Daily Coach
               </span>
               <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-950/80 dark:text-indigo-300">
                 Web
@@ -64,13 +67,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Center Navigation Tabs (Desktop & Tablet) */}
-        <nav className="hidden md:flex items-center space-x-1 bg-slate-100 dark:bg-slate-800/60 p-1 rounded-2xl border border-slate-200/60 dark:border-slate-800/50">
+        {/* Center Navigation Tabs (Desktop & Tablet) — scrollable for 10 hubs */}
+        <nav className="hidden md:flex items-center space-x-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-xl lg:max-w-none overflow-x-auto">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+              className={`flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap shrink-0 ${
                 activeTab === tab.id
                   ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'

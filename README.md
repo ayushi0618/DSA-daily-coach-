@@ -13,6 +13,11 @@
 * **🧠 Revision Vault**: A dedicated flashcard interface utilizing spaced repetition to review previously solved problems.
 * **📈 Gamification & Analytics**: Comprehensive statistics tracking daily login streaks, total problems solved, and a leveling system to keep users motivated.
 * **🌗 Bespoke Dual-Theme Design**: A beautiful, eye-safe pastel light theme and a strict, distraction-free deep dark mode.
+* **📊 Algorithm Visualizer**: Animated bar-chart visualizations for Bubble Sort, Merge Sort, Quick Sort, and Binary Search — with play/pause, speed & array-size controls, step counter, and live time/space complexity badges.
+* **🧩 15 Core Patterns Library**: The essential DSA patterns (Sliding Window, Two Pointers, DP, …) with when-to-use guides, code templates, and curated LeetCode practice links — plus an interactive Big-O cheat sheet with a growth-rate chart.
+* **🎤 Mock Interview Mode**: Timed 30/45-minute mock interviews from a bank of real LeetCode problems, with a 4-axis self-assessment rubric (correctness, complexity, edge cases, communication) and session history.
+* **🗓️ 7-Day Study Plan Generator**: Analyzes your solve history to find weak topics and builds a day-by-day plan with LeetCode links, progress checkboxes, and XP rewards.
+* **🔁 SM-2 Spaced Repetition**: The Revision Vault now schedules reviews with Again/Hard/Good/Easy grading and a "Due for review" queue so you retain what you solve.
 
 ## 🛠️ Technical Stack
 

@@ -30,7 +30,16 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['Fira Code', 'monospace'],
-      }
+        display: ['"Space Grotesk"', 'Inter', 'system-ui', 'sans-serif'],
+      },
+      colors: {
+        ink: {
+          DEFAULT: '#0a0e1a',
+          soft: '#0d1326',
+          card: '#111830',
+        },
+        paper: '#faf9f6',
+      },
     },
   },
   plugins: [],
