@@ -77,7 +77,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const [statusFilter, setStatusFilter] = useState<'All' | 'Solved' | 'Todo'>('All');
   const [diffFilter, setDiffFilter] = useState<'All' | Difficulty>('All');
 
-  const isSolved = (id: number) => solvedProblems.some(sp => sp.id === id.toString());
+  // Solved problems are stored with generated ids (sol_...) — match by title so
+  // the Home table, filters, and "Solved" status stay in sync with Stats/Vault.
+  const solvedTitles = useMemo(
+    () => new Set(solvedProblems.map(sp => sp.title.trim().toLowerCase())),
+    [solvedProblems]
+  );
+
+  const isSolved = (id: number) => {
+    const prob = PROBLEMS.find(p => p.id === id);
+    return prob ? solvedTitles.has(prob.title.trim().toLowerCase()) : false;
+  };
 
   const filteredProblems = useMemo(() => {
     return PROBLEMS.filter(p => {

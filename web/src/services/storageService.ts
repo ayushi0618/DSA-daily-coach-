@@ -665,14 +665,14 @@ function getDefaultMockProblems(): SolvedProblem[] {
     },
     {
       id: 'sol_2',
-      title: 'Valid Anagram',
-      topic: 'Arrays & Strings',
+      title: 'Valid Parentheses',
+      topic: 'Strings & Stack',
       difficulty: 'Easy',
       solvedAt: now - dayMs * 1.1, // Yesterday
       language: 'Python',
       timeComplexity: 'O(N)',
-      spaceComplexity: 'O(1)',
-      notes: 'Character frequency array of size 26.',
+      spaceComplexity: 'O(N)',
+      notes: 'Stack-based matching: push opening brackets, pop on closing ones.',
       bookmarked: false,
     },
     {
