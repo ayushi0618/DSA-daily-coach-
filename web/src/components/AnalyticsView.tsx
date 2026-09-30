@@ -86,7 +86,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ stats, user, probl
       </div>
 
       {/* Level Progression Banner */}
-      <div className="rounded-3xl bg-gradient-to-r from-purple-900 via-indigo-900 to-indigo-950 text-slate-900 p-6 sm:p-8 shadow-md">
+      <div className="rounded-3xl bg-gradient-to-r from-purple-900 via-indigo-900 to-indigo-950 text-white p-6 sm:p-8 shadow-md">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
             <span className="text-xs uppercase font-bold tracking-widest text-purple-300">
@@ -218,7 +218,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ stats, user, probl
                     </div>
                     <div className="w-full h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-slate-100 transition-all duration-500"
+                        className="h-full rounded-full bg-indigo-500 transition-all duration-500"
                         style={{ width: `${pct}%` }}
                       />
                     </div>

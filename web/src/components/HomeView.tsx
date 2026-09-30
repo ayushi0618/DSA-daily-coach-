@@ -250,7 +250,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </div>
             ) : (
               filteredProblems.map((prob, idx) => {
-                const isSolved = solvedProblems.some(sp => sp.id === prob.id.toString());
+                const isSolved = solvedProblems.some(sp => sp.title === prob.title);
                 
                 return (
                   <div key={prob.id} 

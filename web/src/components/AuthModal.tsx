@@ -11,9 +11,9 @@ interface AuthModalProps {
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess }) => {
   const [tab, setTab] = useState<'signin' | 'signup'>('signin');
-  const [email, setEmail] = useState('ayushi.singh0618@gmail.com');
-  const [password, setPassword] = useState('dsa12345');
-  const [name, setName] = useState('Ayushi Singh');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [language, setLanguage] = useState<Language>('Java');
   const [dailyGoal, setDailyGoal] = useState<number>(1);
   const [error, setError] = useState<string | null>(null);

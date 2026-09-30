@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Mail, Award, Flame, Zap, Trophy, ShieldCheck, LogOut, ExternalLink, Edit3, Check, CheckCircle2, Lock } from 'lucide-react';
 import { UserProfile, UserStats, SolvedProblem, Language } from '../types';
 import { StorageService } from '../services/storageService';
@@ -31,6 +31,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [preferredLanguage, setPreferredLanguage] = useState<Language>(user.preferredLanguage);
   const [dailyGoal, setDailyGoal] = useState<number>(user.dailyGoal);
   const [selectedAvatar, setSelectedAvatar] = useState<string>(user.photoUrl || '👨‍💻');
+
+  // Re-sync the edit form every time it is opened — useState initializers only
+  // run on first mount, so without this the form shows stale values after a
+  // profile update or user switch.
+  useEffect(() => {
+    if (isEditing) {
+      setDisplayName(user.displayName);
+      setEmail(user.email);
+      setLeetcodeUsername(user.leetcodeUsername || '');
+      setPreferredLanguage(user.preferredLanguage);
+      setDailyGoal(user.dailyGoal);
+      setSelectedAvatar(user.photoUrl || '👨‍💻');
+    }
+  }, [isEditing, user]);
 
   const achievements = StorageService.getAchievements(problems, user, chatCount);
   const unlockedCount = achievements.filter(a => a.isUnlocked).length;

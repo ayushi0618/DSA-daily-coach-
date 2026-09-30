@@ -108,7 +108,7 @@ export const AnimatedLecture: React.FC<AnimatedLectureProps> = ({
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm mb-8">
       
       {/* Lecture Header Banner */}
-      <div className="bg-slate-900 text-slate-900 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-slate-900 text-white p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center space-x-2">
             <span className="px-2 py-0.5 rounded bg-indigo-500/30 text-indigo-300 font-bold text-xs uppercase tracking-wider">
@@ -121,7 +121,7 @@ export const AnimatedLecture: React.FC<AnimatedLectureProps> = ({
               <Sparkles className="w-3.5 h-3.5" /> Interactive Whiteboard
             </span>
           </div>
-          <h2 className="text-xl font-bold tracking-tight mt-1 text-slate-900">
+          <h2 className="text-xl font-bold tracking-tight mt-1 text-white">
             {problemTitle}
           </h2>
         </div>
